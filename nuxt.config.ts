@@ -2,6 +2,9 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxt/eslint'],
   ssr: true,
   devtools: { enabled: true },
+  devServer: {
+    port: 8530,
+  },
   app: {
     head: {
       link: [
