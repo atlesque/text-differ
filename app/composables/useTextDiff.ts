@@ -1,5 +1,6 @@
 import { diffLines } from 'diff'
 import type { DiffLine, DiffResult } from '~~/shared/types/diff'
+import { tokenizeCode } from './useSyntaxHighlight'
 
 interface UseTextDiffOptions {
   /** Debounce delay in ms. Defaults to 150. */
@@ -9,6 +10,7 @@ interface UseTextDiffOptions {
 export function useTextDiff(
   leftText: Ref<string>,
   rightText: Ref<string>,
+  language: Ref<string>,
   options: UseTextDiffOptions = {},
 ) {
   const { debounceMs = 150 } = options
@@ -19,10 +21,13 @@ export function useTextDiff(
   })
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  let computeId = 0
 
-  function compute() {
+  async function compute() {
+    const currentId = ++computeId
     const left = leftText.value
     const right = rightText.value
+    const lang = language.value
 
     if (!left && !right) {
       result.value = {
@@ -31,6 +36,15 @@ export function useTextDiff(
       }
       return
     }
+
+    // Tokenize both texts in parallel
+    const [leftTokens, rightTokens] = await Promise.all([
+      tokenizeCode(left, lang),
+      tokenizeCode(right, lang),
+    ])
+
+    // Bail if a newer compute was scheduled
+    if (currentId !== computeId) return
 
     const lineChanges = diffLines(left, right, { ignoreWhitespace: false })
 
@@ -44,8 +58,6 @@ export function useTextDiff(
 
     for (const part of lineChanges) {
       const rawLines = part.value.split('\n')
-      // Diff always includes a trailing newline in the value, so the
-      // last element is always an empty string. Remove it.
       if (rawLines[rawLines.length - 1] === '') {
         rawLines.pop()
       }
@@ -60,8 +72,19 @@ export function useTextDiff(
           },
         }
 
-        // For removed/added lines, compute word-level diffs against the
-        // corresponding line in the other text if available.
+        // Attach syntax tokens from pre-computed arrays
+        if (leftTokens.length > 0 || rightTokens.length > 0) {
+          if (part.removed && entry.lineNumber.left) {
+            entry.tokens = leftTokens[entry.lineNumber.left - 1] ?? undefined
+          }
+          else if (part.added && entry.lineNumber.right) {
+            entry.tokens = rightTokens[entry.lineNumber.right - 1] ?? undefined
+          }
+          else if (entry.lineNumber.left) {
+            entry.tokens = leftTokens[entry.lineNumber.left - 1] ?? undefined
+          }
+        }
+
         if (part.added || part.removed) {
           entry.wordDiffs = []
         }
@@ -96,7 +119,6 @@ export function useTextDiff(
     }
   }
 
-  // Debounced recompute
   function scheduleCompute() {
     if (debounceTimer) {
       clearTimeout(debounceTimer)
@@ -104,10 +126,8 @@ export function useTextDiff(
     debounceTimer = setTimeout(compute, debounceMs)
   }
 
-  // Watch for changes on both texts
-  watch([leftText, rightText], scheduleCompute, { immediate: true })
+  watch([leftText, rightText, language], scheduleCompute, { immediate: true })
 
-  // Compute immediately when called manually
   function refresh() {
     if (debounceTimer) {
       clearTimeout(debounceTimer)

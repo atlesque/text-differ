@@ -1,9 +1,47 @@
 <script setup lang="ts">
-import type { DiffLine } from '~~/shared/types/diff'
+import type { DiffLine, DiffViewMode } from '~~/shared/types/diff'
 
-defineProps<{
+const props = defineProps<{
   lines: DiffLine[]
+  viewMode: DiffViewMode
 }>()
+
+// ---------------------------------------------------------------------------
+// Split-view helpers — pair lines so both sides have the same row count
+// ---------------------------------------------------------------------------
+
+interface SplitRow {
+  left: DiffLine | null
+  right: DiffLine | null
+}
+
+const splitRows = computed<SplitRow[]>(() => {
+  const rows: SplitRow[] = []
+
+  for (const line of props.lines) {
+    if (line.type === 'unchanged') {
+      rows.push({ left: line, right: line })
+    }
+    else if (line.type === 'removed') {
+      rows.push({ left: line, right: null })
+    }
+    else {
+      rows.push({ left: null, right: line })
+    }
+  }
+
+  return rows
+})
+
+// ---------------------------------------------------------------------------
+// Unified-view helpers — every line rendered in a single column
+// ---------------------------------------------------------------------------
+
+const unifiedLines = computed(() => props.lines)
+
+// ---------------------------------------------------------------------------
+// Sync-scroll for split view
+// ---------------------------------------------------------------------------
 
 const leftPanel = ref<HTMLElement | null>(null)
 const rightPanel = ref<HTMLElement | null>(null)
@@ -34,58 +72,187 @@ function onRightScroll() {
   })
 }
 
-function lineClass(type: DiffLine['type']) {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function lineTypeClass(type: DiffLine['type']): string {
   return {
-    'diff-line-added': type === 'added',
-    'diff-line-removed': type === 'removed',
-    'diff-line-unchanged': type === 'unchanged',
-  }
+    added: 'diff-line-add',
+    removed: 'diff-line-remove',
+    unchanged: 'diff-line-context',
+  }[type]
+}
+
+function linePrefix(type: DiffLine['type']): string {
+  return {
+    added: '+',
+    removed: '−',
+    unchanged: '',
+  }[type]
 }
 </script>
 
 <template>
   <div
     v-if="lines.length > 0"
-    class="diff-viewer grid grid-cols-1 md:grid-cols-2 border border-muted rounded-lg overflow-hidden"
+    class="diff-viewer rounded-lg overflow-hidden border border-muted"
   >
-    <!-- Left panel -->
+    <!-- ================================================================= -->
+    <!-- SPLIT VIEW                                                         -->
+    <!-- ================================================================= -->
     <div
-      ref="leftPanel"
-      class="diff-panel-left overflow-auto max-h-[600px] border-r border-muted"
-      @scroll="onLeftScroll"
+      v-if="viewMode === 'split'"
+      class="grid grid-cols-1 md:grid-cols-2"
     >
+      <!-- Left (original) panel ----------------------------------------- -->
       <div
-        v-for="(line, index) in lines.filter(l => l.type !== 'added')"
-        :key="`left-${index}`"
-        class="diff-row flex font-mono text-xs leading-5"
-        :class="lineClass(line.type)"
+        ref="leftPanel"
+        class="diff-panel overflow-auto max-h-150"
+        @scroll="onLeftScroll"
       >
-        <span class="diff-gutter w-12 shrink-0 text-right pr-2 select-none text-muted/50 border-r border-muted">
-          {{ line.lineNumber.left ?? '' }}
-        </span>
-        <span class="diff-content pl-2 whitespace-pre-wrap break-all">{{ line.value }}</span>
+        <div
+          v-for="(row, idx) in splitRows"
+          :key="`split-l-${idx}`"
+          class="diff-row flex font-mono text-xs leading-5 min-h-5"
+          :class="row.left ? lineTypeClass(row.left.type) : 'diff-line-context'"
+        >
+          <!-- gutter -->
+          <span class="diff-gutter w-13 shrink-0 text-right pr-2 select-none border-r border-muted/50 opacity-60">
+            {{ row.left?.lineNumber.left ?? '' }}
+          </span>
+          <!-- sign column -->
+          <span class="w-4 shrink-0 text-center select-none opacity-60">
+            {{ row.left ? linePrefix(row.left.type) : '' }}
+          </span>
+          <!-- content -->
+          <span class="diff-content pl-0.5 whitespace-pre-wrap break-all flex-1">
+            <template v-if="row.left">
+              <template v-if="row.left.tokens && row.left.tokens.length > 0">
+                <span
+                  v-for="(t, ti) in row.left.tokens"
+                  :key="ti"
+                  :style="t.htmlStyle"
+                >{{ t.content }}</span>
+              </template>
+              <template v-else-if="row.left.wordDiffs && row.left.wordDiffs.length > 0">
+                <span
+                  v-for="(wd, wi) in row.left.wordDiffs"
+                  :key="wi"
+                  :class="{
+                    'diff-word-add': wd.type === 'added',
+                    'diff-word-remove': wd.type === 'removed',
+                  }"
+                >{{ wd.value }}</span>
+              </template>
+              <template v-else>{{ row.left.value }}</template>
+            </template>
+          </span>
+        </div>
+      </div>
+
+      <!-- Right (modified) panel ---------------------------------------- -->
+      <div
+        ref="rightPanel"
+        class="diff-panel overflow-auto max-h-150 border-l border-muted"
+        @scroll="onRightScroll"
+      >
+        <div
+          v-for="(row, idx) in splitRows"
+          :key="`split-r-${idx}`"
+          class="diff-row flex font-mono text-xs leading-5 min-h-5"
+          :class="row.right ? lineTypeClass(row.right.type) : 'diff-line-context'"
+        >
+          <!-- gutter -->
+          <span class="diff-gutter w-13 shrink-0 text-right pr-2 select-none border-r border-muted/50 opacity-60">
+            {{ row.right?.lineNumber.right ?? '' }}
+          </span>
+          <!-- sign column -->
+          <span class="w-4 shrink-0 text-center select-none opacity-60">
+            {{ row.right ? linePrefix(row.right.type) : '' }}
+          </span>
+          <!-- content -->
+          <span class="diff-content pl-0.5 whitespace-pre-wrap break-all flex-1">
+            <template v-if="row.right">
+              <template v-if="row.right.tokens && row.right.tokens.length > 0">
+                <span
+                  v-for="(t, ti) in row.right.tokens"
+                  :key="ti"
+                  :style="t.htmlStyle"
+                >{{ t.content }}</span>
+              </template>
+              <template v-else-if="row.right.wordDiffs && row.right.wordDiffs.length > 0">
+                <span
+                  v-for="(wd, wi) in row.right.wordDiffs"
+                  :key="wi"
+                  :class="{
+                    'diff-word-add': wd.type === 'added',
+                    'diff-word-remove': wd.type === 'removed',
+                  }"
+                >{{ wd.value }}</span>
+              </template>
+              <template v-else>{{ row.right.value }}</template>
+            </template>
+          </span>
+        </div>
       </div>
     </div>
 
-    <!-- Right panel -->
+    <!-- ================================================================= -->
+    <!-- UNIFIED VIEW                                                       -->
+    <!-- ================================================================= -->
     <div
-      ref="rightPanel"
-      class="diff-panel-right overflow-auto max-h-[600px]"
-      @scroll="onRightScroll"
+      v-else
+      class="diff-panel overflow-auto max-h-150"
     >
       <div
-        v-for="(line, index) in lines.filter(l => l.type !== 'removed')"
-        :key="`right-${index}`"
-        class="diff-row flex font-mono text-xs leading-5"
-        :class="lineClass(line.type)"
+        v-for="(line, idx) in unifiedLines"
+        :key="`uni-${idx}`"
+        class="diff-row flex font-mono text-xs leading-5 min-h-5"
+        :class="lineTypeClass(line.type)"
       >
-        <span class="diff-gutter w-12 shrink-0 text-right pr-2 select-none text-muted/50 border-r border-muted">
-          {{ line.lineNumber.right ?? '' }}
+        <!-- gutter: old number | new number -->
+        <span class="diff-gutter w-18 shrink-0 text-right pr-2 select-none border-r border-muted/50 opacity-60">
+          <template v-if="line.type === 'added'">
+            &nbsp;{{ line.lineNumber.right }}
+          </template>
+          <template v-else-if="line.type === 'removed'">
+            {{ line.lineNumber.left }}&nbsp;
+          </template>
+          <template v-else>
+            {{ line.lineNumber.left }} {{ line.lineNumber.right }}
+          </template>
         </span>
-        <span class="diff-content pl-2 whitespace-pre-wrap break-all">{{ line.value }}</span>
+        <!-- sign column -->
+        <span class="w-4 shrink-0 text-center select-none opacity-60">
+          {{ linePrefix(line.type) }}
+        </span>
+        <!-- content -->
+        <span class="diff-content pl-0.5 whitespace-pre-wrap break-all flex-1">
+          <template v-if="line.tokens && line.tokens.length > 0">
+            <span
+              v-for="(t, ti) in line.tokens"
+              :key="ti"
+              :style="t.htmlStyle"
+            >{{ t.content }}</span>
+          </template>
+          <template v-else-if="line.wordDiffs && line.wordDiffs.length > 0">
+            <span
+              v-for="(wd, wi) in line.wordDiffs"
+              :key="wi"
+              :class="{
+                'diff-word-add': wd.type === 'added',
+                'diff-word-remove': wd.type === 'removed',
+              }"
+            >{{ wd.value }}</span>
+          </template>
+          <template v-else>{{ line.value }}</template>
+        </span>
       </div>
     </div>
   </div>
+
+  <!-- Empty state -->
   <div
     v-else
     class="flex items-center justify-center py-12 text-muted text-sm border border-dashed border-muted rounded-lg"
@@ -95,19 +262,34 @@ function lineClass(type: DiffLine['type']) {
 </template>
 
 <style scoped>
-.diff-row {
-  min-height: 1.25rem;
-}
-
-.diff-line-added {
+/* ---- Row backgrounds (GitHub-style) ---- */
+.diff-line-add {
   background-color: var(--ui-bg-success);
 }
-
-.diff-line-removed {
+.diff-line-remove {
   background-color: var(--ui-bg-error);
 }
-
-.diff-line-unchanged {
+.diff-line-context {
   background-color: transparent;
+}
+
+/* ---- Word-level diff highlighting ---- */
+.diff-word-add {
+  background-color: color-mix(in srgb, var(--ui-color-success-500, #22c55e) 30%, transparent);
+  border-radius: 2px;
+}
+.diff-word-remove {
+  background-color: color-mix(in srgb, var(--ui-color-error-500, #ef4444) 30%, transparent);
+  border-radius: 2px;
+}
+
+/* ---- Hover ---- */
+.diff-row:hover {
+  filter: brightness(0.97);
+}
+@media (prefers-color-scheme: dark) {
+  .diff-row:hover {
+    filter: brightness(1.08);
+  }
 }
 </style>

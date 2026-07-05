@@ -1,3 +1,10 @@
+export type DiffViewMode = 'split' | 'unified'
+
+export interface HighlightToken {
+  content: string
+  htmlStyle: string
+}
+
 export interface DiffLine {
   type: 'added' | 'removed' | 'unchanged'
   value: string
@@ -6,6 +13,7 @@ export interface DiffLine {
     right?: number
   }
   wordDiffs?: WordDiff[]
+  tokens?: HighlightToken[]
 }
 
 export interface WordDiff {

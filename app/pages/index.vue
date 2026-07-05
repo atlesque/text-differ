@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { SUPPORTED_LANGUAGES } from '~~/app/composables/useSyntaxHighlight'
+
 useHead({
   title: 'Text Differ — Compare texts side by side',
 })
@@ -7,8 +9,10 @@ const leftText = ref('')
 const rightText = ref('')
 const compareMode = ref<'realtime' | 'manual'>('realtime')
 const activeTab = ref('original')
+const viewMode = ref<'split' | 'unified'>('split')
+const language = ref('text')
 
-const { result, refresh } = useTextDiff(leftText, rightText)
+const { result, refresh } = useTextDiff(leftText, rightText, language)
 
 const tabs = computed(() => [
   {
@@ -153,7 +157,39 @@ function handleCompare() {
         class="space-y-4 pt-2"
       >
         <DiffStats :result="result" />
-        <DiffViewer :lines="result.lines" />
+
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-muted">Lang:</span>
+            <USelect
+              v-model="language"
+              :items="SUPPORTED_LANGUAGES"
+              size="xs"
+              class="w-32"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-muted">View:</span>
+            <UButton
+              :variant="viewMode === 'split' ? 'solid' : 'outline'"
+              size="xs"
+              icon="i-lucide:columns-2"
+              @click="viewMode = 'split'"
+            >
+              Split
+            </UButton>
+            <UButton
+              :variant="viewMode === 'unified' ? 'solid' : 'outline'"
+              size="xs"
+              icon="i-lucide:align-justify"
+              @click="viewMode = 'unified'"
+            >
+              Unified
+            </UButton>
+          </div>
+        </div>
+
+        <DiffViewer :lines="result.lines" :view-mode="viewMode" />
       </div>
     </main>
   </UContainer>
