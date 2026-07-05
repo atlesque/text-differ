@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00DC82" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Left panel -->
+  <rect x="2" y="4" width="9" height="16" rx="1" />
+  <line x1="5" y1="8" x2="8" y2="8" />
+  <line x1="5" y1="12" x2="8" y2="12" />
+  <line x1="5" y1="16" x2="7" y2="16" />
+
+  <!-- Right panel -->
+  <rect x="13" y="4" width="9" height="16" rx="1" />
+  <line x1="16" y1="8" x2="19" y2="8" />
+  <line x1="16" y1="12" x2="18" y2="12" />
+  <line x1="16" y1="16" x2="19" y2="16" />
+
+  <!-- Diff indicators -->
+  <line x1="10" y1="8" x2="11" y2="8" stroke="#f43f5e" />
+  <line x1="11" y1="12" x2="13" y2="12" stroke="#00DC82" />
+</svg>
