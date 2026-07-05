@@ -13,6 +13,7 @@ const viewMode = ref<'split' | 'unified'>('split')
 const language = ref('text')
 
 const { result, refresh } = useTextDiff(leftText, rightText, language)
+const { leftJsonError, rightJsonError, canSort, sortBoth } = useJsonSort(leftText, rightText, language)
 
 const tabs = computed(() => [
   {
@@ -156,6 +157,15 @@ function handleCompare() {
         v-else-if="activeTab === 'diff'"
         class="space-y-4 pt-2"
       >
+        <!-- JSON validation errors -->
+        <UAlert
+          v-if="leftJsonError || rightJsonError"
+          color="error"
+          variant="soft"
+          icon="i-lucide:triangle-alert"
+          :title="[leftJsonError, rightJsonError].filter(Boolean).join(' · ')"
+        />
+
         <DiffStats :result="result" />
 
         <div class="flex flex-wrap items-center gap-3">
@@ -187,6 +197,16 @@ function handleCompare() {
               Unified
             </UButton>
           </div>
+          <!-- JSON sort button -->
+          <UButton
+            v-if="canSort"
+            variant="soft"
+            size="xs"
+            icon="i-lucide:arrow-up-down"
+            @click="sortBoth"
+          >
+            Sort JSON keys
+          </UButton>
         </div>
 
         <DiffViewer :lines="result.lines" :view-mode="viewMode" />
