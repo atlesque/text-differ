@@ -264,28 +264,63 @@ function linePrefix(type: DiffLine['type']): string {
 <style scoped>
 /* ---- Row backgrounds (GitHub-style) ---- */
 .diff-line-add {
-  background-color: var(--ui-bg-success);
+  background-color: #dafbe1;
 }
 .diff-line-remove {
-  background-color: var(--ui-bg-error);
+  background-color: #ffebe9;
 }
 .diff-line-context {
   background-color: transparent;
 }
 
+/* ---- Dark mode row backgrounds ---- */
+:global(.dark) .diff-line-add {
+  background-color: rgba(63, 185, 80, 0.15);
+}
+:global(.dark) .diff-line-remove {
+  background-color: rgba(248, 81, 73, 0.15);
+}
+@media (prefers-color-scheme: dark) {
+  .diff-line-add {
+    background-color: rgba(63, 185, 80, 0.15);
+  }
+  .diff-line-remove {
+    background-color: rgba(248, 81, 73, 0.15);
+  }
+}
+
 /* ---- Word-level diff highlighting ---- */
 .diff-word-add {
-  background-color: color-mix(in srgb, var(--ui-color-success-500, #22c55e) 30%, transparent);
+  background-color: #acf2bd;
   border-radius: 2px;
 }
 .diff-word-remove {
-  background-color: color-mix(in srgb, var(--ui-color-error-500, #ef4444) 30%, transparent);
+  background-color: #fdb8c0;
   border-radius: 2px;
+}
+
+/* ---- Dark mode word-level ---- */
+:global(.dark) .diff-word-add {
+  background-color: rgba(63, 185, 80, 0.35);
+}
+:global(.dark) .diff-word-remove {
+  background-color: rgba(248, 81, 73, 0.35);
+}
+@media (prefers-color-scheme: dark) {
+  .diff-word-add {
+    background-color: rgba(63, 185, 80, 0.35);
+  }
+  .diff-word-remove {
+    background-color: rgba(248, 81, 73, 0.35);
+  }
 }
 
 /* ---- Hover ---- */
 .diff-row:hover {
   filter: brightness(0.97);
+}
+:global(.dark) .diff-row:hover {
+  filter: brightness(1.08);
 }
 @media (prefers-color-scheme: dark) {
   .diff-row:hover {
