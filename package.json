@@ -1,0 +1,30 @@
+{
+  "name": "text-differ",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "nuxt prepare && vue-tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.0.0",
+    "diff": "^7.0.0",
+    "nuxt": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "vue": "latest",
+    "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@iconify-json/lucide": "^1.2.116",
+    "@nuxt/eslint": "^1.0.0",
+    "@types/diff": "^7.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0"
+  }
+}
