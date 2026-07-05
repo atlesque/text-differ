@@ -6,8 +6,32 @@ useHead({
 const leftText = ref('')
 const rightText = ref('')
 const compareMode = ref<'realtime' | 'manual'>('realtime')
+const activeTab = ref('original')
 
 const { result, refresh } = useTextDiff(leftText, rightText)
+
+const tabs = computed(() => [
+  {
+    label: 'Original',
+    value: 'original',
+    icon: 'i-lucide:file-text',
+    badge: leftText.value.length ? `${leftText.value.length} chars` : undefined,
+  },
+  {
+    label: 'Modified',
+    value: 'modified',
+    icon: 'i-lucide:pencil-line',
+    badge: rightText.value.length ? `${rightText.value.length} chars` : undefined,
+  },
+  {
+    label: 'Diff',
+    value: 'diff',
+    icon: 'i-lucide:diff',
+    badge: result.value.stats.totalLines
+      ? `${result.value.stats.addedLines}+ ${result.value.stats.removedLines}−`
+      : undefined,
+  },
+])
 
 function handleSwap() {
   const temp = leftText.value
@@ -34,9 +58,7 @@ function handleCompare() {
           name="i-lucide:diff"
           class="size-6 text-primary"
         />
-        <h1
-          class="text-xl font-semibold tracking-tight"
-        >
+        <h1 class="text-xl font-semibold tracking-tight">
           Text Differ
         </h1>
       </div>
@@ -46,39 +68,7 @@ function handleCompare() {
     </header>
 
     <!-- Main content -->
-    <main class="flex-1 py-6 space-y-6">
-      <!-- Input panels -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="text-sm font-medium">Original Text</label>
-            <span class="text-xs text-muted">{{ leftText.length }} chars</span>
-          </div>
-          <UTextarea
-            v-model="leftText"
-            placeholder="Paste your original text here..."
-            class="w-full font-mono text-sm"
-            :rows="10"
-            autoresize
-            color="neutral"
-          />
-        </div>
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="text-sm font-medium">Modified Text</label>
-            <span class="text-xs text-muted">{{ rightText.length }} chars</span>
-          </div>
-          <UTextarea
-            v-model="rightText"
-            placeholder="Paste your modified text here..."
-            class="w-full font-mono text-sm"
-            :rows="10"
-            autoresize
-            color="neutral"
-          />
-        </div>
-      </div>
-
+    <main class="flex-1 py-6 space-y-4">
       <!-- Toolbar -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2">
@@ -121,11 +111,50 @@ function handleCompare() {
         </div>
       </div>
 
-      <!-- Stats -->
-      <DiffStats :result="result" />
+      <!-- Tabs -->
+      <UTabs
+        v-model="activeTab"
+        :items="tabs"
+        :content="false"
+        class="w-full"
+      />
 
-      <!-- Diff output -->
-      <DiffViewer :lines="result.lines" />
+      <!-- Tab content -->
+      <div
+        v-if="activeTab === 'original'"
+        class="pt-2"
+      >
+        <UTextarea
+          v-model="leftText"
+          placeholder="Paste your original text here..."
+          class="w-full font-mono text-sm"
+          :rows="16"
+          autoresize
+          color="neutral"
+        />
+      </div>
+
+      <div
+        v-else-if="activeTab === 'modified'"
+        class="pt-2"
+      >
+        <UTextarea
+          v-model="rightText"
+          placeholder="Paste your modified text here..."
+          class="w-full font-mono text-sm"
+          :rows="16"
+          autoresize
+          color="neutral"
+        />
+      </div>
+
+      <div
+        v-else-if="activeTab === 'diff'"
+        class="space-y-4 pt-2"
+      >
+        <DiffStats :result="result" />
+        <DiffViewer :lines="result.lines" />
+      </div>
     </main>
   </UContainer>
 </template>
