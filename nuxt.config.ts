@@ -1,10 +1,6 @@
 export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxt/eslint'],
-  ssr: true,
   devtools: { enabled: true },
-  devServer: {
-    port: 8530,
-  },
   app: {
     head: {
       link: [
@@ -17,12 +13,10 @@ export default defineNuxtConfig({
     preference: 'system',
     fallback: 'light',
   },
-  compatibilityDate: '2026-07-05',
-  nitro: {
-    prerender: {
-      routes: ['/'],
-    },
+  devServer: {
+    port: 8530,
   },
+  compatibilityDate: '2026-07-05',
   vite: {
     optimizeDeps: {
       include: ['diff'],
